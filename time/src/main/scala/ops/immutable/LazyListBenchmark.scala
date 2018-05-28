@@ -1,7 +1,6 @@
-package operational.mutable
+package ops.immutable
 
 import java.util.concurrent.TimeUnit
-import scala.collection.mutable.ArrayDeque
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
@@ -11,15 +10,16 @@ import org.openjdk.jmh.infra.Blackhole
 @Warmup(iterations = 8)
 @Measurement(iterations = 8)
 @State(Scope.Benchmark)
-class ArrayDequeBenchmark {
-  @Param(scala.Array("0", "1", "2", "3", "4", "7", "8", "15", "16", "17", "39", "282", "4096", "131070", "7312102"))
+class LazyListBenchmark {
+  //@Param(scala.Array("0", "1", "2", "3", "4", "7", "8", "15", "16", "17", "39", "282", "4096", "131070", "7312102"))
+  @Param(scala.Array(/*"0", */"1"/*, "2", "3", "4"*/, "7"/*, "8"*//*, "15"*//*, "16"*//*, "17"*//*, "33"*//*, "282"*/, "4096"/*, "131070"*//*, "7312102"*/))
   var size: Int = _
 
-  var xs: ArrayDeque[Long] = _
-  var zs: ArrayDeque[Long] = _
-  var zipped: ArrayDeque[(Long, Long)] = _
-  var randomIndices: Array[Int] = _
-  def fresh(n: Int) = ArrayDeque((1 to n).map(_.toLong): _*)
+  var xs: LazyList[Long] = _
+  var zs: LazyList[Long] = _
+  var zipped: LazyList[(Long, Long)] = _
+  var randomIndices: scala.Array[Int] = _
+  def fresh(n: Int) = LazyList((1 to n).map(_.toLong): _*)
 
   @Setup(Level.Trial)
   def initTrial(): Unit = {
@@ -37,10 +37,10 @@ class ArrayDequeBenchmark {
   @Benchmark
   @OperationsPerInvocation(1000)
   def expand_prepend(bh: Blackhole): Unit = {
-    val ys = xs
+    var ys = xs
     var i = 0L
     while (i < 1000) {
-      ys.prepend(i)
+      ys = i #:: ys
       i += 1
     }
     bh.consume(ys)
@@ -52,7 +52,7 @@ class ArrayDequeBenchmark {
     var ys = xs
     var i = 0L
     while (i < 1000) {
-      ys.prepend(i)
+      ys = i #:: ys
       i += 1
       ys = ys.tail
     }
@@ -62,10 +62,10 @@ class ArrayDequeBenchmark {
   @Benchmark
   @OperationsPerInvocation(1000)
   def expand_append(bh: Blackhole): Unit = {
-    val ys = xs
+    var ys = xs
     var i = 0L
     while (i < 1000) {
-      ys.addOne(i)
+      ys = ys :+ i
       i += 1
     }
     bh.consume(ys)
@@ -77,7 +77,7 @@ class ArrayDequeBenchmark {
     var ys = xs
     var i = 0L
     while (i < 1000) {
-      ys.addOne(i)
+      ys = ys :+ i
       i += 1
       ys = ys.init
     }
@@ -87,11 +87,11 @@ class ArrayDequeBenchmark {
   @Benchmark
   @OperationsPerInvocation(1000)
   def expand_prependAppend(bh: Blackhole): Unit = {
-    val ys = xs
+    var ys = xs
     var i = 0L
     while (i < 1000) {
-      if ((i & 1) == 1) ys.addOne(i)
-      else ys.prepend(i)
+      if ((i & 1) == 1) ys = ys :+ i
+      else ys = i #:: ys
       i += 1
     }
     bh.consume(ys)
@@ -100,10 +100,10 @@ class ArrayDequeBenchmark {
   @Benchmark
   @OperationsPerInvocation(1000)
   def expand_prependAll(bh: Blackhole): Unit = {
-    val ys = xs
+    var ys = xs
     var i = 0L
     while (i < 1000) {
-      ys.prependAll(zs)
+      ys = zs ++: ys
       i += 1
     }
     bh.consume(ys)
@@ -112,10 +112,10 @@ class ArrayDequeBenchmark {
   @Benchmark
   @OperationsPerInvocation(1000)
   def expand_appendAll(bh: Blackhole): Unit = {
-    val ys = xs
+    var ys = xs
     var i = 0L
     while (i < 1000) {
-      ys.addAll(zs)
+      ys = ys :++ zs
       i += 1
     }
     bh.consume(ys)
@@ -124,11 +124,11 @@ class ArrayDequeBenchmark {
   @Benchmark
   @OperationsPerInvocation(1000)
   def expand_prependAllAppendAll(bh: Blackhole): Unit = {
-    val ys = xs
+    var ys = xs
     var i = 0L
     while (i < 1000) {
-      if ((i & 1) == 1) ys.addAll(zs)
-      else ys.prependAll(zs)
+      if ((i & 1) == 1) ys = ys :++ zs
+      else ys = zs ++: ys
       i += 1
     }
     bh.consume(ys)
@@ -160,7 +160,7 @@ class ArrayDequeBenchmark {
 
   @Benchmark
   def traverse_iterator(bh: Blackhole): Unit = {
-    val it = xs.iterator
+    val it = xs.iterator()
     while (it.hasNext) {
       bh.consume(it.next())
     }
@@ -221,7 +221,7 @@ class ArrayDequeBenchmark {
   def transform_updateLast(bh: Blackhole): Unit = {
     var i = 0
     while (i < 1000) {
-      bh.consume(xs.update(size - 1, i))
+      bh.consume(xs.updated(size - 1, i))
       i += 1
     }
   }
@@ -231,7 +231,7 @@ class ArrayDequeBenchmark {
   def transform_updateRandom(bh: Blackhole): Unit = {
     var i = 0
     while (i < 1000) {
-      bh.consume(xs.update(randomIndices(i), i))
+      bh.consume(xs.updated(randomIndices(i), i))
       i += 1
     }
   }
@@ -244,7 +244,7 @@ class ArrayDequeBenchmark {
       val from = randomIndices(i)
       val replaced = randomIndices(if (i > 0) i - 1 else math.min(i + 1, size - 1))
       val length = randomIndices(if (i > 1) i - 2 else math.min(i + 2, size - 1))
-      bh.consume(xs.patchInPlace(from, xs.take(length), replaced))
+      bh.consume(xs.patch(from, xs.take(length), replaced))
       i += 1
     }
   }

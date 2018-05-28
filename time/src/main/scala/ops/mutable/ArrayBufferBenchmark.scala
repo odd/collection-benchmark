@@ -1,4 +1,4 @@
-package operational.mutable
+package ops.mutable
 
 import java.util.concurrent.TimeUnit
 import scala.collection.mutable.ArrayBuffer
@@ -12,7 +12,8 @@ import org.openjdk.jmh.infra.Blackhole
 @Measurement(iterations = 8)
 @State(Scope.Benchmark)
 class ArrayBufferBenchmark {
-  @Param(scala.Array("0", "1", "2", "3", "4", "7", "8", "15", "16", "17", "39", "282", "4096", "131070", "7312102"))
+  //@Param(scala.Array("0", "1", "2", "3", "4", "7", "8", "15", "16", "17", "39", "282", "4096", "131070", "7312102"))
+  @Param(scala.Array(/*"0", */"1"/*, "2", "3", "4"*/, "7"/*, "8"*//*, "15"*//*, "16"*//*, "17"*//*, "33"*//*, "282"*/, "4096"/*, "131070"*//*, "7312102"*/))
   var size: Int = _
 
   var xs: ArrayBuffer[Long] = _

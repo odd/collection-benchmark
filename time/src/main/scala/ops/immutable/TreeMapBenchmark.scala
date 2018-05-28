@@ -1,4 +1,4 @@
-package operational.immutable
+package ops.immutable
 
 import java.util.concurrent.TimeUnit
 import scala.collection.immutable.TreeMap
@@ -12,7 +12,8 @@ import org.openjdk.jmh.infra.Blackhole
 @Measurement(iterations = 10)
 @State(Scope.Benchmark)
 class TreeMapBenchmark {
-  @Param(scala.Array("0", "1", "2", "3", "4", "7", "8", "15", "16", "17", "39", "282", "4096", "131070", "7312102"))
+  //@Param(scala.Array("0", "1", "2", "3", "4", "7", "8", "15", "16", "17", "39", "282", "4096", "131070", "7312102"))
+  @Param(scala.Array(/*"0", */"1"/*, "2", "3", "4"*/, "7"/*, "8"*//*, "15"*//*, "16"*//*, "17"*//*, "33"*//*, "282"*/, "4096"/*, "131070"*//*, "7312102"*/))
   var size: Int = _
 
   var xs: TreeMap[Long, Long] = _

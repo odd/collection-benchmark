@@ -1,7 +1,7 @@
-package operational.mutable
+package ops.mutable
 
 import java.util.concurrent.TimeUnit
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.ArrayDeque
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
@@ -11,15 +11,16 @@ import org.openjdk.jmh.infra.Blackhole
 @Warmup(iterations = 8)
 @Measurement(iterations = 8)
 @State(Scope.Benchmark)
-class ListBufferBenchmark {
-  @Param(scala.Array("0", "1", "2", "3", "4", "7", "8", "15", "16", "17", "39", "282", "4096", "131070", "7312102"))
+class ArrayDequeBenchmark {
+  //@Param(scala.Array("0", "1", "2", "3", "4", "7", "8", "15", "16", "17", "39", "282", "4096", "131070", "7312102"))
+  @Param(scala.Array(/*"0", */"1"/*, "2", "3", "4"*/, "7"/*, "8"*//*, "15"*//*, "16"*//*, "17"*//*, "33"*//*, "282"*/, "4096"/*, "131070"*//*, "7312102"*/))
   var size: Int = _
 
-  var xs: ListBuffer[Long] = _
-  var zs: ListBuffer[Long] = _
-  var zipped: ListBuffer[(Long, Long)] = _
-  var randomIndices: scala.Array[Int] = _
-  def fresh(n: Int) = ListBuffer((1 to n).map(_.toLong): _*)
+  var xs: ArrayDeque[Long] = _
+  var zs: ArrayDeque[Long] = _
+  var zipped: ArrayDeque[(Long, Long)] = _
+  var randomIndices: Array[Int] = _
+  def fresh(n: Int) = ArrayDeque((1 to n).map(_.toLong): _*)
 
   @Setup(Level.Trial)
   def initTrial(): Unit = {
@@ -37,10 +38,10 @@ class ListBufferBenchmark {
   @Benchmark
   @OperationsPerInvocation(1000)
   def expand_prepend(bh: Blackhole): Unit = {
-    var ys = xs
+    val ys = xs
     var i = 0L
     while (i < 1000) {
-      ys.insert(0, i)
+      ys.prepend(i)
       i += 1
     }
     bh.consume(ys)
@@ -52,7 +53,7 @@ class ListBufferBenchmark {
     var ys = xs
     var i = 0L
     while (i < 1000) {
-      ys.insert(0, i)
+      ys.prepend(i)
       i += 1
       ys = ys.tail
     }
@@ -62,7 +63,7 @@ class ListBufferBenchmark {
   @Benchmark
   @OperationsPerInvocation(1000)
   def expand_append(bh: Blackhole): Unit = {
-    var ys = xs
+    val ys = xs
     var i = 0L
     while (i < 1000) {
       ys.addOne(i)
@@ -91,7 +92,7 @@ class ListBufferBenchmark {
     var i = 0L
     while (i < 1000) {
       if ((i & 1) == 1) ys.addOne(i)
-      else ys.insert(0, i)
+      else ys.prepend(i)
       i += 1
     }
     bh.consume(ys)
@@ -103,7 +104,7 @@ class ListBufferBenchmark {
     val ys = xs
     var i = 0L
     while (i < 1000) {
-      ys.insertAll(0, zs)
+      ys.prependAll(zs)
       i += 1
     }
     bh.consume(ys)
@@ -128,7 +129,7 @@ class ListBufferBenchmark {
     var i = 0L
     while (i < 1000) {
       if ((i & 1) == 1) ys.addAll(zs)
-      else ys.insertAll(0, zs)
+      else ys.prependAll(zs)
       i += 1
     }
     bh.consume(ys)

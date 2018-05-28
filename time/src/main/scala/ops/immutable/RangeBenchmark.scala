@@ -1,4 +1,4 @@
-package operational.immutable
+package ops.immutable
 
 import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations._
@@ -11,7 +11,8 @@ import org.openjdk.jmh.infra.Blackhole
 @Measurement(iterations = 8)
 @State(Scope.Benchmark)
 class RangeBenchmark {
-  @Param(scala.Array("0", "1", "2", "3", "4", "7", "8", "15", "16", "17", "39", "282", "4096", "131070", "7312102"))
+  //@Param(scala.Array("0", "1", "2", "3", "4", "7", "8", "15", "16", "17", "39", "282", "4096", "131070", "7312102"))
+  @Param(scala.Array(/*"0", */"1"/*, "2", "3", "4"*/, "7"/*, "8"*//*, "15"*//*, "16"*//*, "17"*//*, "33"*//*, "282"*/, "4096"/*, "131070"*//*, "7312102"*/))
   var size: Int = _
 
   var xs: Range = _

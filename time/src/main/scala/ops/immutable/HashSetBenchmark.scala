@@ -1,7 +1,7 @@
-package operational.immutable
+package ops.immutable
 
 import java.util.concurrent.TimeUnit
-import scala.collection.immutable.ChampHashSet
+import scala.collection.immutable.HashSet
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
@@ -11,16 +11,17 @@ import org.openjdk.jmh.infra.Blackhole
 @Warmup(iterations = 8)
 @Measurement(iterations = 8)
 @State(Scope.Benchmark)
-class ChampHashSetBenchmark {
-  @Param(scala.Array("0", "1", "2", "3", "4", "7", "8", "15", "16", "17", "39", "282", "4096", "131070", "7312102"))
+class HashSetBenchmark {
+  //@Param(scala.Array("0", "1", "2", "3", "4", "7", "8", "15", "16", "17", "39", "282", "4096", "131070", "7312102"))
+  @Param(scala.Array(/*"0", */"1"/*, "2", "3", "4"*/, "7"/*, "8"*//*, "15"*//*, "16"*//*, "17"*//*, "33"*//*, "282"*/, "4096"/*, "131070"*//*, "7312102"*/))
   var size: Int = _
 
-  var xs: ChampHashSet[Long] = _
-  var ys: ChampHashSet[Long] = _
-  var zs: ChampHashSet[Long] = _
-  var zipped: ChampHashSet[(Long, Long)] = _
+  var xs: HashSet[Long] = _
+  var ys: HashSet[Long] = _
+  var zs: HashSet[Long] = _
+  var zipped: HashSet[(Long, Long)] = _
   var randomIndices: scala.Array[Int] = _
-  def fresh(n: Int) = ChampHashSet((1 to n).map(_.toLong): _*)
+  def fresh(n: Int) = HashSet((1 to n).map(_.toLong): _*)
 
   @Setup(Level.Trial)
   def initTrial(): Unit = {
@@ -63,14 +64,15 @@ class ChampHashSetBenchmark {
     }
   }
 
-  @Benchmark
-  def traverse_initLast(bh: Blackhole): Unit = {
-    var ys = xs
-    while (ys.nonEmpty) {
-      bh.consume(ys.last)
-      ys = ys.init
-    }
-  }
+//  // TODO: currently disabled, since it does not finish
+//  @Benchmark
+//  def traverse_initLast(bh: Blackhole): Unit = {
+//    var ys = xs
+//    while (ys.nonEmpty) {
+//      bh.consume(ys.last)
+//      ys = ys.init
+//    }
+//  }
 
   @Benchmark
   def traverse_iterator(bh: Blackhole): Unit = {

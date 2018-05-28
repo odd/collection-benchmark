@@ -1,6 +1,7 @@
-package operational.immutable
+package ops.immutable
 
 import java.util.concurrent.TimeUnit
+import scala.collection.immutable.NumericRange
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
@@ -10,20 +11,21 @@ import org.openjdk.jmh.infra.Blackhole
 @Warmup(iterations = 8)
 @Measurement(iterations = 8)
 @State(Scope.Benchmark)
-class LazyListBenchmark {
-  @Param(scala.Array("0", "1", "2", "3", "4", "7", "8", "15", "16", "17", "39", "282", "4096", "131070", "7312102"))
+class NumericRangeBenchmark {
+  //@Param(scala.Array("0", "1", "2", "3", "4", "7", "8", "15", "16", "17", "39", "282", "4096", "131070", "7312102"))
+  @Param(scala.Array(/*"0", */"1"/*, "2", "3", "4"*/, "7"/*, "8"*//*, "15"*//*, "16"*//*, "17"*//*, "33"*//*, "282"*/, "4096"/*, "131070"*//*, "7312102"*/))
   var size: Int = _
 
-  var xs: LazyList[Long] = _
-  var zs: LazyList[Long] = _
-  var zipped: LazyList[(Long, Long)] = _
+  var xs: NumericRange[Int] = _
+  var zs: NumericRange[Int] = _
   var randomIndices: scala.Array[Int] = _
-  def fresh(n: Int) = LazyList((1 to n).map(_.toLong): _*)
+  var zipped: IndexedSeq[(Long, Long)] = _
+  def fresh(n: Int) = NumericRange.inclusive(1, n, 1)
 
   @Setup(Level.Trial)
   def initTrial(): Unit = {
     xs = fresh(size)
-    zs = fresh((size / 1000) max 2).map(-_)
+    zs = NumericRange.inclusive(-1, (-size / 1000) min -2, -1)
     zipped = xs.map(x => (x, x))
     if (size > 0) {
       randomIndices = scala.Array.fill(1000)(scala.util.Random.nextInt(size))
@@ -32,109 +34,6 @@ class LazyListBenchmark {
 
   @Benchmark
   def create(bh: Blackhole): Unit = bh.consume(fresh(size))
-
-  @Benchmark
-  @OperationsPerInvocation(1000)
-  def expand_prepend(bh: Blackhole): Unit = {
-    var ys = xs
-    var i = 0L
-    while (i < 1000) {
-      ys = i #:: ys
-      i += 1
-    }
-    bh.consume(ys)
-  }
-
-  @Benchmark
-  @OperationsPerInvocation(1000)
-  def expand_prependTail(bh: Blackhole): Unit = {
-    var ys = xs
-    var i = 0L
-    while (i < 1000) {
-      ys = i #:: ys
-      i += 1
-      ys = ys.tail
-    }
-    bh.consume(ys)
-  }
-
-  @Benchmark
-  @OperationsPerInvocation(1000)
-  def expand_append(bh: Blackhole): Unit = {
-    var ys = xs
-    var i = 0L
-    while (i < 1000) {
-      ys = ys :+ i
-      i += 1
-    }
-    bh.consume(ys)
-  }
-
-  @Benchmark
-  @OperationsPerInvocation(1000)
-  def expand_appendInit(bh: Blackhole): Unit = {
-    var ys = xs
-    var i = 0L
-    while (i < 1000) {
-      ys = ys :+ i
-      i += 1
-      ys = ys.init
-    }
-    bh.consume(ys)
-  }
-
-  @Benchmark
-  @OperationsPerInvocation(1000)
-  def expand_prependAppend(bh: Blackhole): Unit = {
-    var ys = xs
-    var i = 0L
-    while (i < 1000) {
-      if ((i & 1) == 1) ys = ys :+ i
-      else ys = i #:: ys
-      i += 1
-    }
-    bh.consume(ys)
-  }
-
-  @Benchmark
-  @OperationsPerInvocation(1000)
-  def expand_prependAll(bh: Blackhole): Unit = {
-    var ys = xs
-    var i = 0L
-    while (i < 1000) {
-      ys = zs ++: ys
-      i += 1
-    }
-    bh.consume(ys)
-  }
-
-  @Benchmark
-  @OperationsPerInvocation(1000)
-  def expand_appendAll(bh: Blackhole): Unit = {
-    var ys = xs
-    var i = 0L
-    while (i < 1000) {
-      ys = ys :++ zs
-      i += 1
-    }
-    bh.consume(ys)
-  }
-
-  @Benchmark
-  @OperationsPerInvocation(1000)
-  def expand_prependAllAppendAll(bh: Blackhole): Unit = {
-    var ys = xs
-    var i = 0L
-    while (i < 1000) {
-      if ((i & 1) == 1) ys = ys :++ zs
-      else ys = zs ++: ys
-      i += 1
-    }
-    bh.consume(ys)
-  }
-
-  @Benchmark
-  def expand_padTo(bh: Blackhole): Unit = bh.consume(xs.padTo(size * 2, 42))
 
   @Benchmark
   def traverse_foreach(bh: Blackhole): Unit = xs.foreach(x => bh.consume(x))
@@ -159,7 +58,7 @@ class LazyListBenchmark {
 
   @Benchmark
   def traverse_iterator(bh: Blackhole): Unit = {
-    val it = xs.iterator()
+    val it = xs.iterator
     while (it.hasNext) {
       bh.consume(it.next())
     }
@@ -270,24 +169,6 @@ class LazyListBenchmark {
   }
 
   @Benchmark
-  def transform_zip(bh: Blackhole): Unit = bh.consume(xs.zip(xs))
-
-  @Benchmark
-  def transform_zipMapTupled(bh: Blackhole): Unit = {
-    val f = (a: Long, b: Long) => (a, b)
-    bh.consume(xs.zip(xs).map(f.tupled))
-  }
-
-  @Benchmark
-  def transform_zipWithIndex(bh: Blackhole): Unit = bh.consume(xs.zipWithIndex)
-
-  @Benchmark
-  def transform_lazyZip(bh: Blackhole): Unit = bh.consume(xs.lazyZip(xs).map((_, _)))
-
-  @Benchmark
-  def transform_unzip(bh: Blackhole): Unit = bh.consume(zipped.unzip)
-
-  @Benchmark
   def transform_reverse(bh: Blackhole): Unit = bh.consume(xs.reverse)
 
   @Benchmark
@@ -295,4 +176,25 @@ class LazyListBenchmark {
     val result = xs.groupBy(_ % 5)
     bh.consume(result)
   }
+
+  @Benchmark
+  def transform_zip(bh: Blackhole): Unit = bh.consume(xs.zip(xs))
+
+  @Benchmark
+  def transform_zipMapTupled(bh: Blackhole): Unit = {
+    val f = (a: Int, b: Int) => (a, b)
+    bh.consume(xs.zip(xs).map(f.tupled))
+  }
+
+  @Benchmark
+  def transform_zipWithIndex(bh: Blackhole): Unit = bh.consume(xs.zipWithIndex)
+
+  @Benchmark
+  def transform_lazyZip(bh: Blackhole): Unit = {
+    val xs1: IndexedSeq[Int] = xs
+    bh.consume(xs1.lazyZip(xs1).map((_, _)))
+  }
+
+  @Benchmark
+  def transform_unzip(bh: Blackhole): Unit = bh.consume(zipped.unzip)
 }
