@@ -11,7 +11,7 @@ val collectionsScalaVersionSettings = Seq(
 
 val commonSettings = Seq(
   organization := "ch.epfl.scala",
-  name := "collection-benchmarks",
+  name := "collection-benchmark",
   version := "0.1.0-SNAPSHOT",
   scalaVersion := "2.13.0-M4",
   scalacOptions ++= Seq("-deprecation", "-feature", "-unchecked", "-language:higherKinds"/*, "-opt:l:classpath"*/),
@@ -25,12 +25,11 @@ val commonSettings = Seq(
   testOptions += Tests.Argument(TestFrameworks.JUnit, "-q", "-v", "-s", "-a"),
   fork in Test := true,
   parallelExecution in Test := false,
-  homepage := Some(url("https://github.com/scala/collection-benchmarks")),
-  licenses := Seq("BSD 3-clause" -> url("http://opensource.org/licenses/BSD-3-Clause")),
+  homepage := Some(url("https://github.com/odd/collection-benchmark")),
   scmInfo := Some(
     ScmInfo(
-      url("https://github.com/scala/collection-benchmarks"),
-      "scm:git:git@github.com:scala/collection-benchmarks.git"
+      url("https://github.com/odd/collection-benchmark"),
+      "scm:git:git@github.com:odd/collection-benchmark.git"
     )),
   publishArtifact := false,
   // The above is enough for Maven repos but it doesn't prevent publishing of ivy.xml files
