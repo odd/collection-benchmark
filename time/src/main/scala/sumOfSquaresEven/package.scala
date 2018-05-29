@@ -153,33 +153,3 @@ class ArrayBaseline {
     bh.consume(ret)
   }
 }
-/*
-@BenchmarkMode(scala.Array(Mode.AverageTime))
-@OutputTimeUnit(TimeUnit.NANOSECONDS)
-@Fork(1)
-@Warmup(iterations = 8)
-@Measurement(iterations = 8)
-@State(Scope.Benchmark)
-class Block {
-  @Param(scala.Array("0", "1", "3", "8", "17", "282", "4096", "131070", "7312102"))
-  var size: Int = _
-
-  var xs: immutable.Block[Long] = _
-  def fresh(n: Int) = immutable.Block((1 to n).map(_.toLong): _*)
-
-  @Setup(Level.Trial)
-  def initTrial(): Unit = {
-    xs = fresh(size)
-  }
-
-  @Benchmark
-  def sumOfSquaresEven(bh: Blackhole) = {
-    val ret =
-      xs.view
-        .filter(x => x % 2L == 0L)
-        .map(x => x * x)
-        .sum
-    bh.consume(ret)
-  }
-}
-*/

@@ -59,7 +59,7 @@ val collections = project.in(file("collections"))
 
 val time = project.in(file("time"))
   .dependsOn(collections)
-    .enablePlugins(JmhPlugin)
+  .enablePlugins(JmhPlugin)
   .settings(commonSettings)
      // Dotty 0.3.0-RC1 crashes when trying to compile this project
     //.settings(disableDotty)
@@ -77,22 +77,21 @@ val time = project.in(file("time"))
       }.evaluated
     )
 
-/*
 val memory = project.in(file("memory"))
   .dependsOn(collections)
-    .settings(commonSettings ++ disablePublishing)
-    .settings(
-      libraryDependencies += ("org.spire-math" %% "jawn-ast" % "0.11.1-SNAPSHOT").withDottyCompat(scalaVersion.value),
-      charts := Def.inputTaskDyn {
-        val targetDir = crossTarget.value
-        val report = targetDir / "report.json"
-        val runTask = run in Compile
-        Def.inputTask {
-          val _ = runTask.evaluated
-          scala.collection.benchmark.Bencharts(report, "Memory footprint (lower is better)", targetDir)
-          targetDir
-        }.toTask(s" ${report.absolutePath}")
-    }.evaluated)
-*/
+  .enablePlugins(JmhPlugin)
+  .settings(commonSettings)
+  .settings(
+    //libraryDependencies += ("org.spire-math" %% "jawn-ast" % "0.11.1-SNAPSHOT").withDottyCompat(scalaVersion.value),
+    charts := Def.inputTaskDyn {
+      val targetDir = crossTarget.value
+      val report = targetDir / "report.json"
+      val runTask = run in Compile
+      Def.inputTask {
+        val _ = runTask.evaluated
+        scala.collection.benchmark.Bencharts(report, "Memory footprint (lower is better)", targetDir)
+        targetDir
+      }.toTask(s" ${report.absolutePath}")
+  }.evaluated)
 
 lazy val charts = inputKey[File]("Runs the benchmarks and produce charts")

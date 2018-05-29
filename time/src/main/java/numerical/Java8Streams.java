@@ -21,13 +21,13 @@ public class Java8Streams {
     @Param({"39"})
     public int vLoSize;
 
-    public int shortRangingFactor = (int)(size * 0.2);
+    private int shortRangingFactor = (int)(size * 0.2);
 
-    public Long[] v_B, vLo_B;
+    private Long[] v_B, vLo_B;
 
-    public long[] v_P, vLo_P;
+    private long[] v_P, vLo_P;
 
-    public Long[] fillArray_B(int range){
+    private Long[] fillArray_B(int range){
         Random r = new Random();
         Long[] array = new Long[range];
         for (int i = 0; i < range; i++) {
@@ -36,7 +36,7 @@ public class Java8Streams {
         return array;
     }
 
-    public long[] fillArray_P(int range){
+    private long[] fillArray_P(int range){
         Random r = new Random();
         long[] array = new long[range];
         for (int i = 0; i < range; i++) {
