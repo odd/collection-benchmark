@@ -33,8 +33,8 @@ val commonSettings = Seq(
     )),
   publishArtifact := false,
   // The above is enough for Maven repos but it doesn't prevent publishing of ivy.xml files
-  publish := (()),
-  publishLocal := (()),
+  publish := ((): Unit),
+  publishLocal := ((): Unit),
   pomExtra :=
     <developers>
       <developer><id>ichoran</id><name>Rex Kerr</name></developer>
@@ -82,8 +82,8 @@ val memory = project.in(file("memory"))
   .enablePlugins(JmhPlugin)
   .settings(commonSettings)
   .settings(
-    //libraryDependencies += ("org.spire-math" %% "jawn-ast" % "0.11.1-SNAPSHOT").withDottyCompat(scalaVersion.value),
-    charts := Def.inputTaskDyn {
+      libraryDependencies += "com.github.plokhotnyuk.jsoniter-scala" %% "macros" % "0.27.1",
+      charts := Def.inputTaskDyn {
       val targetDir = crossTarget.value
       val report = targetDir / "report.json"
       val runTask = run in Compile
