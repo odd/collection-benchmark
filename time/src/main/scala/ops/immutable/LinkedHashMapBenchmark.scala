@@ -1,7 +1,7 @@
 package ops.immutable
 
 import java.util.concurrent.TimeUnit
-import scala.collection.immutable.{NumericRange, TreeMap}
+import scala.collection.immutable.{LinkedHashMap, NumericRange}
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
@@ -11,19 +11,19 @@ import org.openjdk.jmh.infra.Blackhole
 @Warmup(iterations = 10)
 @Measurement(iterations = 10)
 @State(Scope.Benchmark)
-class TreeMapBenchmark {
+class LinkedHashMapBenchmark {
   //@Param(scala.Array("0", "1", "2", "3", "4", "7", "8", "15", "16", "17", "39", "282", "4096", "131070", "7312102"))
   @Param(scala.Array("1", "7", "4096", "128000"))
   var size: Int = _
 
   val random = new scala.util.Random(19740115L)
-  val empty: TreeMap[Long, Long] = TreeMap.empty[Long, Long]
-  var xs: TreeMap[Long, Long] = _
-  var zs: TreeMap[Long, Long] = _
-  var zipped: TreeMap[Long, (Long, Long)] = _
+  val empty: LinkedHashMap[Long, Long] = LinkedHashMap.empty[Long, Long]
+  var xs: LinkedHashMap[Long, Long] = _
+  var zs: LinkedHashMap[Long, Long] = _
+  var zipped: LinkedHashMap[Long, (Long, Long)] = _
   var randomIndices: scala.Array[Int] = _
-  def fresh(n: Int) = TreeMap((1 to n).map(x => (x.toLong, x.toLong)): _*)
-  def freshBuilder() = TreeMap.newBuilder[Long, Long]
+  def fresh(n: Int) = LinkedHashMap((1 to n).map(x => (x.toLong, x.toLong)): _*)
+  def freshBuilder() = LinkedHashMap.newBuilder[Long, Long]
 
   @Setup(Level.Trial)
   def initTrial(): Unit = {

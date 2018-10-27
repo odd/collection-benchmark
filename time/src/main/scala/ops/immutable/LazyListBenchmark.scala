@@ -108,6 +108,9 @@ class LazyListBenchmark {
   }
 
   @Benchmark
+  def expand_concat(bh: Blackhole): Unit = bh.consume(xs ++ zs)
+
+  @Benchmark
   def extract_palindrome(bh: Blackhole): Unit = {
     @tailrec def isPalindrome[A](xs: Seq[A]): Boolean = {
       xs match {

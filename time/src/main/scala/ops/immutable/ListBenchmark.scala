@@ -119,6 +119,9 @@ class ListBenchmark {
   }
 
   @Benchmark
+  def expand_concat(bh: Blackhole): Unit = bh.consume(xs ++ zs)
+
+  @Benchmark
   @OperationsPerInvocation(1000)
   def expand_prepend(bh: Blackhole): Unit = {
     var ys = xs

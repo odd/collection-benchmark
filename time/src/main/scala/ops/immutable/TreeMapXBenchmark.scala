@@ -1,7 +1,8 @@
+/*
 package ops.immutable
 
 import java.util.concurrent.TimeUnit
-import scala.collection.immutable.{NumericRange, TreeMap}
+import scala.collection.immutable.{NumericRange, TreeMapX}
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
@@ -11,19 +12,19 @@ import org.openjdk.jmh.infra.Blackhole
 @Warmup(iterations = 10)
 @Measurement(iterations = 10)
 @State(Scope.Benchmark)
-class TreeMapBenchmark {
+class TreeMapXBenchmark {
   //@Param(scala.Array("0", "1", "2", "3", "4", "7", "8", "15", "16", "17", "39", "282", "4096", "131070", "7312102"))
   @Param(scala.Array("1", "7", "4096", "128000"))
   var size: Int = _
 
   val random = new scala.util.Random(19740115L)
-  val empty: TreeMap[Long, Long] = TreeMap.empty[Long, Long]
-  var xs: TreeMap[Long, Long] = _
-  var zs: TreeMap[Long, Long] = _
-  var zipped: TreeMap[Long, (Long, Long)] = _
+  val empty: TreeMapX[Long, Long] = TreeMapX.empty[Long, Long]
+  var xs: TreeMapX[Long, Long] = _
+  var zs: TreeMapX[Long, Long] = _
+  var zipped: TreeMapX[Long, (Long, Long)] = _
   var randomIndices: scala.Array[Int] = _
-  def fresh(n: Int) = TreeMap((1 to n).map(x => (x.toLong, x.toLong)): _*)
-  def freshBuilder() = TreeMap.newBuilder[Long, Long]
+  def fresh(n: Int) = TreeMapX((1 to n).map(x => (x.toLong, x.toLong)): _*)
+  def freshBuilder() = TreeMapX.newBuilder[Long, Long]
 
   @Setup(Level.Trial)
   def initTrial(): Unit = {
@@ -242,41 +243,10 @@ class TreeMapBenchmark {
   }
 
   @Benchmark
-  def transform_remove(bh: Blackhole): Unit = {
-    bh.consume(xs.removeAll(randomIndices.map(_ + 1L)))
-  }
-
-  @Benchmark
-  def transform_removeIterator(bh: Blackhole): Unit = {
-    var n = 0L
-    val it = xs.removeAll(randomIndices.map(_ + 1L)).iterator
-    while (it.hasNext) {
-      n += it.next()._2
-      bh.consume(n)
-    }
-    bh.consume(n)
-  }
-
-  @Benchmark
-  def transform_removeConsecutive(bh: Blackhole): Unit = {
-    bh.consume(xs.removeAll(Seq.range[Long](size / 50, size - (size / 50))))
-  }
-
-  @Benchmark
-  def transform_removeConsecutiveIterator(bh: Blackhole): Unit = {
-    var n = 0L
-    val it = xs.removeAll(Seq.range[Long](size / 50, size - (size / 50))).iterator
-    while (it.hasNext) {
-      n += it.next()._2
-      bh.consume(n)
-    }
-    bh.consume(n)
-  }
-
-  @Benchmark
   def traverse_equals(bh: Blackhole): Unit = bh.consume(xs == zs)
 
   @Benchmark
   def access_find(bh: Blackhole): Unit =
     bh.consume(xs.find(x => x._2 > size / 2))
 }
+*/

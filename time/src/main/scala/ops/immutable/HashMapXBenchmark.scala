@@ -1,37 +1,36 @@
+/*
 package ops.immutable
 
 import java.util.concurrent.TimeUnit
-import scala.collection.immutable.{ChampHashSet, HashSet, NumericRange}
+import scala.collection.immutable.{HashMapX, NumericRange}
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
 @BenchmarkMode(scala.Array(Mode.AverageTime))
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 @Fork(1)
-@Warmup(iterations = 8)
-@Measurement(iterations = 8)
+@Warmup(iterations = 10)
+@Measurement(iterations = 10)
 @State(Scope.Benchmark)
-class ChampHashSetBenchmark {
+class HashMapXBenchmark {
   //@Param(scala.Array("0", "1", "2", "3", "4", "7", "8", "15", "16", "17", "39", "282", "4096", "131070", "7312102"))
-  @Param(scala.Array(/*"0", */"1"/*, "2", "3", "4"*/, "7"/*, "8"*//*, "15"*//*, "16"*//*, "17"*//*, "33"*//*, "282"*/, "4096"/*, "131070"*//*, "7312102"*/))
+  @Param(scala.Array("1", "7", "4096", "128000"))
   var size: Int = _
 
   val random = new scala.util.Random(19740115L)
-  val empty: ChampHashSet[Long] = ChampHashSet.empty[Long]
-  var xs: ChampHashSet[Long] = _
-  var ys: ChampHashSet[Long] = _
-  var zs: ChampHashSet[Long] = _
-  var zipped: ChampHashSet[(Long, Long)] = _
+  val empty: HashMapX[Long, Long] = HashMapX.empty[Long, Long]
+  var xs: HashMapX[Long, Long] = _
+  var zs: HashMapX[Long, Long] = _
+  var zipped: HashMapX[Long, (Long, Long)] = _
   var randomIndices: scala.Array[Int] = _
-  def fresh(n: Int) = ChampHashSet(1L to n.toLong: _*)
-  def freshBuilder() = ChampHashSet.newBuilder[Long]
+  def fresh(n: Int) = HashMapX((1 to n).map(x => (x.toLong, x.toLong)): _*)
+  def freshBuilder() = HashMapX.newBuilder[Long, Long]
 
   @Setup(Level.Trial)
   def initTrial(): Unit = {
     xs = fresh(size)
-    ys = ChampHashSet(1L to size.toLong / 2L: _*) ++ ChampHashSet((size.toLong / 2L) to 1L by -1L: _*)
-    zs = fresh((size / 1000) max 2).map(-_)
-    zipped = xs.map(x => (x, x))
+    zs = fresh((size / 1000).max(2)).map { case (k, v) => (k, -v) }
+    zipped = xs.map { case (k, v)                      => (k, (v, v)) }
     if (size > 0) {
       randomIndices = scala.Array.fill(1000)(random.nextInt(size))
     }
@@ -46,7 +45,7 @@ class ChampHashSetBenchmark {
     val builder = freshBuilder()
     builder.sizeHint(size)
     while (i < size) {
-      builder += i
+      builder += i -> i
       i += 1
     }
     bh.consume(builder.result())
@@ -56,10 +55,9 @@ class ChampHashSetBenchmark {
   def create_buildNumericRange(bh: Blackhole): Unit = {
     var i = 0L
     val builder = freshBuilder()
-    //println("# builder: " + builder.getClass.getName)
     builder.sizeHint(size * 10)
     while (i < size) {
-      builder ++= NumericRange(i - 10, i, 1)
+      builder ++= NumericRange(i - 10, i, 1).map(n => n -> n)
       i += 1
     }
     bh.consume(builder.result())
@@ -67,11 +65,11 @@ class ChampHashSetBenchmark {
 
   @Benchmark
   @OperationsPerInvocation(1000)
-  def expand_incl(bh: Blackhole): Unit = {
+  def expand_updated(bh: Blackhole): Unit = {
     var ys = xs
     var i = 0L
     while (i < 1000) {
-      ys += -i
+      ys += (i -> -i)
       i += 1
     }
     bh.consume(ys)
@@ -84,7 +82,7 @@ class ChampHashSetBenchmark {
   def traverse_foreach(bh: Blackhole): Unit = {
     var n = 0L
     xs.foreach { x =>
-      n += x
+      n += x._2
       bh.consume(n)
     }
     bh.consume(n)
@@ -95,7 +93,7 @@ class ChampHashSetBenchmark {
     var n = 0L
     var ys = xs
     while (ys.nonEmpty) {
-      n += ys.head
+      n += ys.head._2
       bh.consume(n)
       ys = ys.tail
     }
@@ -107,7 +105,7 @@ class ChampHashSetBenchmark {
     var n = 0L
     var ys = xs
     while (ys.nonEmpty) {
-      n += ys.last
+      n += ys.last._2
       bh.consume(n)
       ys = ys.init
     }
@@ -119,25 +117,27 @@ class ChampHashSetBenchmark {
     var n = 0L
     val it = xs.iterator
     while (it.hasNext) {
-      n += it.next()
+      n += it.next()._2
       bh.consume(n)
     }
     bh.consume(n)
   }
 
   @Benchmark
-  def traverse_foldLeft(bh: Blackhole): Unit = bh.consume(xs.foldLeft(0L) {
-    case (acc, n) =>
-      bh.consume(n)
-      acc + n
-  })
+  def traverse_foldLeft(bh: Blackhole): Unit =
+    bh.consume(xs.foldLeft(0L) {
+      case (acc, n) =>
+        bh.consume(n)
+        acc + n._2
+    })
 
   @Benchmark
-  def traverse_foldRight(bh: Blackhole): Unit = bh.consume(xs.foldRight(0L) {
-    case (n, acc) =>
-      bh.consume(n)
-      acc - n
-  })
+  def traverse_foldRight(bh: Blackhole): Unit =
+    bh.consume(xs.foldRight(0L) {
+      case (n, acc) =>
+        bh.consume(n)
+        acc - n._2
+    })
 
   @Benchmark
   @OperationsPerInvocation(1000)
@@ -154,7 +154,7 @@ class ChampHashSetBenchmark {
   def access_random(bh: Blackhole): Unit = {
     var i = 0
     while (i < 1000) {
-      bh.consume(xs(randomIndices(i)))
+      bh.consume(xs(randomIndices(i) + 1))
       i += 1
     }
   }
@@ -186,32 +186,38 @@ class ChampHashSetBenchmark {
   }
 
   @Benchmark
-  def transform_map(bh: Blackhole): Unit = bh.consume(xs.map((n: Long) => n + 1L))
+  def transform_map(bh: Blackhole): Unit =
+    bh.consume(xs.map {
+      case (n: Long, m: Long) => (n + 1L) -> (m - 1L)
+    })
 
   @Benchmark
-  def transform_collect(bh: Blackhole): Unit = bh.consume(xs.collect {
-    case n if n % 5L == 0L => n * 5L
-    case n if n % 3L == 0L => n * 3L
-    case n if n == size - 1 => n * n
-  })
+  def transform_collect(bh: Blackhole): Unit =
+    bh.consume(xs.collect {
+      case (n: Long, m: Long) if n % 5L == 0L  => (n * 5L, m)
+      case (n: Long, m: Long) if n % 3L == 0L  => (n * 3L, m)
+      case (n: Long, m: Long) if n == size - 1 => (n * n, m)
+    })
 
   @Benchmark
-  def transform_flatMap(bh: Blackhole): Unit = bh.consume(xs.flatMap {
-    case n if n % 5L == 0L => List.range(1L, n / 5, 5)
-    case n if n % 3L == 0L => List(n, -n)
-    case n if n == size - 1 => List.range(1L, n)
-    case _ => Nil
-  })
+  def transform_flatMap(bh: Blackhole): Unit =
+    bh.consume(xs.flatMap {
+      case (n: Long, m: Long) if n % 5L == 0L  => List.range(1L, n / 5, 5)
+      case (n: Long, m: Long) if n % 3L == 0L  => List(n, -n)
+      case (n: Long, m: Long) if n == size - 1 => List.range(1L, n)
+      case _                                   => Nil
+    })
 
   @Benchmark
-  def transform_filter(bh: Blackhole): Unit = bh.consume(xs.filter(_ % 5L == 0L))
+  def transform_filter(bh: Blackhole): Unit =
+    bh.consume(xs.filter(_._2 % 5L == 0L))
 
   @Benchmark
   @OperationsPerInvocation(100)
   def transform_span(bh: Blackhole): Unit = {
     var i = 0
     while (i < 100) {
-      val (xs1, xs2) = xs.span(x => x < randomIndices(i).toLong)
+      val (xs1, xs2) = xs.span(x => x._2 < randomIndices(i).toLong)
       bh.consume(xs1)
       bh.consume(xs2)
       i += 1
@@ -222,32 +228,25 @@ class ChampHashSetBenchmark {
   def transform_zip(bh: Blackhole): Unit = bh.consume(xs.zip(xs))
 
   @Benchmark
-  def transform_zipMapTupled(bh: Blackhole): Unit = {
-    val f = (a: Long, b: Long) => (a, b)
-    bh.consume(xs.zip(xs).map(f.tupled))
-  }
-
-  @Benchmark
   def transform_zipWithIndex(bh: Blackhole): Unit = bh.consume(xs.zipWithIndex)
 
   @Benchmark
-  def transform_lazyZip(bh: Blackhole): Unit = bh.consume(xs.lazyZip(xs).map((_, _)))
+  def transform_lazyZip(bh: Blackhole): Unit =
+    bh.consume(xs.lazyZip(xs).map((_, _)))
 
   @Benchmark
   def transform_unzip(bh: Blackhole): Unit = bh.consume(zipped.unzip)
 
   @Benchmark
   def transform_groupBy(bh: Blackhole): Unit = {
-    bh.consume(xs.groupBy(_ % 5L))
+    bh.consume(xs.groupBy(_._2 % 5L))
   }
 
   @Benchmark
-  def traverse_subsetOf(bh: Blackhole): Unit = bh.consume(ys.subsetOf(xs))
-
-  @Benchmark
-  def traverse_equals(bh: Blackhole): Unit = bh.consume(xs == ys)
+  def traverse_equals(bh: Blackhole): Unit = bh.consume(xs == zs)
 
   @Benchmark
   def access_find(bh: Blackhole): Unit =
-    bh.consume(xs.find(x => x > size / 2))
+    bh.consume(xs.find(x => x._2 > size / 2))
 }
+*/

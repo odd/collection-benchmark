@@ -39,6 +39,9 @@ class NumericRangeBenchmark {
   def create_apply(bh: Blackhole): Unit = bh.consume(fresh(size))
 
   @Benchmark
+  def expand_concat(bh: Blackhole): Unit = bh.consume(xs ++ zs)
+
+  @Benchmark
   def expand_padTo(bh: Blackhole): Unit = {
     bh.consume(xs.padTo(size * 2, 42L))
   }
