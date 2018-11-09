@@ -7,15 +7,15 @@ package immutable
   * and a tree for the ordering of the keys to provide efficient
   * insertion/modification order traversal and destructuring.
   *
-  * By default insertion order (`OrderedMapZ.OrderBy.Insertion`)
-  * is used, but modification order (`OrderedMapZ.OrderBy.Modification`)
+  * By default insertion order (`OrderedMapX.OrderBy.Insertion`)
+  * is used, but modification order (`OrderedMapX.OrderBy.Modification`)
   * can be used instead if so specified at creation.
   *
-  * The `orderingBy(orderBy: OrderedMapZ.OrderBy): OrderedMapZ[K, V]` method
+  * The `orderingBy(orderBy: OrderedMapX.OrderBy): OrderedMapX[K, V]` method
   * can be used to switch to the specified ordering for the returned map.
   *
   * A key can be manually refreshed (i.e. placed at the end) via the
-  * `refresh(key: K): OrderedMapZ[K, V]` method (regardless of the ordering in
+  * `refresh(key: K): OrderedMapX[K, V]` method (regardless of the ordering in
   * use).
 
   * Internally, an ordinal counter is increased for each insertion/modification
@@ -31,24 +31,24 @@ package immutable
   * @version 2.13
   * @since 2.13
   * @define coll immutable ordered map
-  * @define Coll `immutable.OrderedMapZ`
+  * @define Coll `immutable.OrderedMapX`
   */
-final class OrderedMapZ[K, +V] private (
-    private val ordering: OrderedMapZ.Ordering[K],
-    private val mapping: OrderedMapZ.Mapping[K, V],
+final class OrderedMapX[K, +V] private (
+    private val ordering: OrderedMapX.Ordering[K],
+    private val mapping: OrderedMapX.Mapping[K, V],
     private val ordinal: Int,
-    val orderedBy: OrderedMapZ.OrderBy)
+    val orderedBy: OrderedMapX.OrderBy)
   extends AbstractMap[K, V]
     with SeqMap[K, V]
-    with MapOps[K, V, OrderedMapZ, OrderedMapZ[K, V]]
-    with StrictOptimizedIterableOps[(K, V), Iterable, OrderedMapZ[K, V]]
-    with StrictOptimizedMapOps[K, V, OrderedMapZ, OrderedMapZ[K, V]] {
+    with MapOps[K, V, OrderedMapX, OrderedMapX[K, V]]
+    with StrictOptimizedIterableOps[(K, V), Iterable, OrderedMapX[K, V]]
+    with StrictOptimizedMapOps[K, V, OrderedMapX, OrderedMapX[K, V]] {
 
-  import OrderedMapZ._
+  import OrderedMapX._
 
-  override protected[this] def className: String = "OrderedMapZ"
+  override protected[this] def className: String = "OrderedMapX"
 
-  override def mapFactory: MapFactory[OrderedMapZ] = OrderedMapZ
+  override def mapFactory: MapFactory[OrderedMapX] = OrderedMapX
 
   override val size = mapping.size
 
@@ -56,32 +56,32 @@ final class OrderedMapZ[K, +V] private (
 
   override def isEmpty = size == 0
 
-  def orderingBy(orderBy: OrderBy): OrderedMapZ[K, V] = {
+  def orderingBy(orderBy: OrderBy): OrderedMapX[K, V] = {
     if (orderBy == this.orderedBy) this
-    else new OrderedMapZ(ordering, mapping, ordinal, orderBy)
+    else new OrderedMapX(ordering, mapping, ordinal, orderBy)
   }
 
-  def updated[V1 >: V](key: K, value: V1): OrderedMapZ[K, V1] = {
+  def updated[V1 >: V](key: K, value: V1): OrderedMapX[K, V1] = {
     mapping.get(key) match {
       case e if ordinal == -1 && (orderedBy == OrderBy.Modification || e.isEmpty) ⇒
         // Reinsert into fresh instance to restart ordinal counting, expensive but only done after 2^32 updates.
-        OrderedMapZ.empty[K, V](orderedBy) ++ this + (key → value)
+        OrderedMapX.empty[K, V](orderedBy) ++ this + (key → value)
       case Some((o, _)) if orderedBy == OrderBy.Insertion =>
-        new OrderedMapZ(
+        new OrderedMapX(
           ordering.incl(o, key),
           mapping.updated[(Int, V1)](key, (o, value)),
           o,
           orderedBy)
       case Some((o, _)) =>
         val o1 = if (ordinal == Int.MaxValue) Int.MinValue else ordinal + 1
-        new OrderedMapZ(
+        new OrderedMapX(
           ordering.excl(o).incl(o1, key),
           mapping.updated[(Int, V1)](key, (o1, value)),
           o1,
           orderedBy)
       case None ⇒
         val o1 = ordinal + 1
-        new OrderedMapZ(
+        new OrderedMapX(
           ordering.incl(o1, key),
           mapping.updated[(Int, V1)](key, (o1, value)),
           o1,
@@ -89,10 +89,10 @@ final class OrderedMapZ[K, +V] private (
     }
   }
 
-  def remove(key: K): OrderedMapZ[K, V] = {
+  def remove(key: K): OrderedMapX[K, V] = {
     mapping.get(key) match {
       case Some((o, _)) ⇒
-        new OrderedMapZ(
+        new OrderedMapX(
           ordering.excl(o),
           mapping.remove(key),
           ordinal,
@@ -102,11 +102,11 @@ final class OrderedMapZ[K, +V] private (
     }
   }
 
-  def refresh(key: K): OrderedMapZ[K, V] = {
+  def refresh(key: K): OrderedMapX[K, V] = {
     mapping.get(key) match {
       case Some((o, _)) ⇒
         val o1 = ordinal + 1
-        new OrderedMapZ(
+        new OrderedMapX(
           ordering.excl(o).incl(o1, key),
           mapping,
           o1,
@@ -126,14 +126,14 @@ final class OrderedMapZ[K, +V] private (
 
   override def lastOption: Option[(K, V)] = ordering.lastOption.map(binding)
 
-  override def tail: OrderedMapZ[K, V] = {
+  override def tail: OrderedMapX[K, V] = {
     val (head, tail) = ordering.headTail
-    new OrderedMapZ(tail, mapping.remove(head), ordinal, orderedBy)
+    new OrderedMapX(tail, mapping.remove(head), ordinal, orderedBy)
   }
 
-  override def init: OrderedMapZ[K, V] = {
+  override def init: OrderedMapX[K, V] = {
     val (init, last) = ordering.initLast
-    new OrderedMapZ(init, mapping.remove(last), ordinal, orderedBy)
+    new OrderedMapX(init, mapping.remove(last), ordinal, orderedBy)
   }
 
   def get(key: K): Option[V] = mapping.get(key).map(value)
@@ -162,8 +162,8 @@ final class OrderedMapZ[K, +V] private (
     override def next(): V = value(binding(iter.next()))
   }
 
-  override def concat[V1 >: V](suffix: IterableOnce[(K, V1)]): OrderedMapZ[K, V1] = {
-    var result: OrderedMapZ[K, V1] = this
+  override def concat[V1 >: V](suffix: IterableOnce[(K, V1)]): OrderedMapX[K, V1] = {
+    var result: OrderedMapX[K, V1] = this
     val iter = suffix.iterator
     while (iter.hasNext) {
       val (k, v) = iter.next()
@@ -172,7 +172,7 @@ final class OrderedMapZ[K, +V] private (
     result
   }
 
-  override def map[K2, V2](f: ((K, V)) => (K2, V2)): OrderedMapZ[K2, V2] = {
+  override def map[K2, V2](f: ((K, V)) => (K2, V2)): OrderedMapX[K2, V2] = {
     var ong: Ordering[K2] = Ordering.empty
     val mng: Mapping[K2, V2] = mapping.map {
       case (k, (o, v)) =>
@@ -180,10 +180,10 @@ final class OrderedMapZ[K, +V] private (
         ong = ong.incl(o, k2)
         (k2, (o, v2))
     }
-    new OrderedMapZ[K2, V2](ong, mng, ordinal, orderedBy)
+    new OrderedMapX[K2, V2](ong, mng, ordinal, orderedBy)
   }
 
-  override def flatMap[K2, V2](f: ((K, V)) => IterableOnce[(K2, V2)]): OrderedMapZ[K2, V2] = {
+  override def flatMap[K2, V2](f: ((K, V)) => IterableOnce[(K2, V2)]): OrderedMapX[K2, V2] = {
     var ong: Ordering[K2] = Ordering.empty
     val mng: Mapping[K2, V2] = mapping.flatMap {
       case (k, (o, v)) =>
@@ -193,10 +193,10 @@ final class OrderedMapZ[K, +V] private (
             (k2, (o, v2))
         }
     }
-    new OrderedMapZ[K2, V2](ong, mng, ordinal, orderedBy)
+    new OrderedMapX[K2, V2](ong, mng, ordinal, orderedBy)
   }
 
-  override def collect[K2, V2](pf: PartialFunction[(K, V), (K2, V2)]): OrderedMapZ[K2, V2] = {
+  override def collect[K2, V2](pf: PartialFunction[(K, V), (K2, V2)]): OrderedMapX[K2, V2] = {
     var ong: Ordering[K2] = Ordering.empty
     val mng: Mapping[K2, V2] = mapping.collect {
       case (k, (o, v)) if pf.isDefinedAt((k, v)) =>
@@ -204,33 +204,33 @@ final class OrderedMapZ[K, +V] private (
         ong = ong.incl(o, k2)
         (k2, (o, v2))
     }
-    new OrderedMapZ[K2, V2](ong, mng, ordinal, orderedBy)
+    new OrderedMapX[K2, V2](ong, mng, ordinal, orderedBy)
   }
 
   @`inline` private[this] def value(p: (_, V)) = p._2
   @`inline` private[this] def binding(k: K) = mapping(k).copy(_1 = k)
 }
-object OrderedMapZ extends MapFactory[OrderedMapZ] {
+object OrderedMapX extends MapFactory[OrderedMapX] {
   sealed trait OrderBy
   final object OrderBy {
     final case object Insertion extends OrderBy
     final case object Modification extends OrderBy
   }
 
-  val Empty = new OrderedMapZ[Nothing, Nothing](Ordering.empty, HashMap.empty, 0, OrderBy.Insertion)
-  def empty[K, V]: OrderedMapZ[K, V] = empty(OrderBy.Insertion)
-  def empty[K, V](orderBy: OrderBy): OrderedMapZ[K, V] = Empty.asInstanceOf[OrderedMapZ[K, V]]
+  val Empty = new OrderedMapX[Nothing, Nothing](Ordering.empty, HashMap.empty, 0, OrderBy.Insertion)
+  def empty[K, V]: OrderedMapX[K, V] = empty(OrderBy.Insertion)
+  def empty[K, V](orderBy: OrderBy): OrderedMapX[K, V] = Empty.asInstanceOf[OrderedMapX[K, V]]
 
-  def from[K, V](it: collection.IterableOnce[(K, V)]): OrderedMapZ[K, V] =
+  def from[K, V](it: collection.IterableOnce[(K, V)]): OrderedMapX[K, V] =
     it match {
-      case vm: OrderedMapZ[K, V] => vm
+      case vm: OrderedMapX[K, V] => vm
       case _                   => (newBuilder[K, V] ++= it).result()
     }
 
-  def newBuilder[K, V]: mutable.Builder[(K, V), OrderedMapZ[K, V]] = newBuilder(OrderBy.Insertion)
+  def newBuilder[K, V]: mutable.Builder[(K, V), OrderedMapX[K, V]] = newBuilder(OrderBy.Insertion)
 
-  def newBuilder[K, V](orderBy: OrderBy): mutable.Builder[(K, V), OrderedMapZ[K, V]] =
-    new mutable.ImmutableBuilder[(K, V), OrderedMapZ[K, V]](empty(orderBy)) {
+  def newBuilder[K, V](orderBy: OrderBy): mutable.Builder[(K, V), OrderedMapX[K, V]] =
+    new mutable.ImmutableBuilder[(K, V), OrderedMapX[K, V]](empty(orderBy)) {
       def addOne(elem: (K, V)): this.type = { elems = elems + elem; this }
     }
 
@@ -422,5 +422,4 @@ object OrderedMapZ extends MapFactory[OrderedMapZ] {
       case Zero => Zero
     }
   }
-
 }

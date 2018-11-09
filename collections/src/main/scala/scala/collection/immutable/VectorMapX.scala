@@ -1,3 +1,15 @@
+/*
+ * Scala (https://www.scala-lang.org)
+ *
+ * Copyright EPFL and Lightbend, Inc.
+ *
+ * Licensed under Apache License 2.0
+ * (http://www.apache.org/licenses/LICENSE-2.0).
+ *
+ * See the NOTICE file distributed with this work for
+ * additional information regarding copyright ownership.
+ */
+
 package scala
 package collection
 package immutable
@@ -68,8 +80,8 @@ final class VectorMapX[K, +V] private (
         (-1, null.asInstanceOf[K])
       case Tombstone.NextOfKin(distance) =>
         field(slot + distance)
-      case k: K =>
-        (slot, k)
+      case k =>
+        (slot, k.asInstanceOf[K])
     }
   }
 
@@ -78,23 +90,17 @@ final class VectorMapX[K, +V] private (
     private[this] var slot = -1
     private[this] var key: K = null.asInstanceOf[K]
 
-    //rintln(s"iterator(): slot = $slot, key = $key, field = $fields, underlying: $underlying")
-
     private[this] def advance(): Unit = {
-      //rintln(s"advance(): slot = $slot, key = $key, fields = $fields, underlying: $underlying")
       val nextSlot = slot + 1
       if (nextSlot >= fieldsLength) {
-        //rintln(s"advance() { $nextSlot >= $fields.size }: nextSlot = $slot, key = $key, fields = $fields, underlying: $underlying")
         slot = fieldsLength
         key = null.asInstanceOf[K]
       } else {
         field(nextSlot) match {
           case (-1, _) ⇒
-            //rintln(s"advance() { field($nextSlot) == (-1, _) }: nextSlot = $slot, key = $key, fields = $fields, underlying: $underlying")
             slot = fieldsLength
             key = null.asInstanceOf[K]
           case (s, k) ⇒
-            //rintln(s"advance() { field($nextSlot) == ($s, $k) }: nextSlot = $slot, key = $key, fields = $fields, underlying: $underlying")
             slot = s
             key = k
         }
@@ -106,7 +112,6 @@ final class VectorMapX[K, +V] private (
     override def hasNext: Boolean = slot < fieldsLength
 
     override def next(): (K, V) = {
-      //rintln(s"next(): slot = $slot, key = $key, field = $fields, underlying: $underlying")
       if (!hasNext) throw new NoSuchElementException("next called on depleted iterator")
       val result = (key, underlying(key)._2)
       advance()
@@ -120,6 +125,7 @@ final class VectorMapX[K, +V] private (
       var fs = fields
       val sz = fs.size
       underlying.get(key) match {
+        case Some((slot, _)) if size == 1 => empty
         case Some((slot, _)) =>
           val s = field(slot)._1
           // Calculate distance to next of kin
@@ -129,9 +135,7 @@ final class VectorMapX[K, +V] private (
               case Tombstone.NextOfKin(d) => d + 1
               case _ => 1
             } else 0
-          //rintln(s"removing: s = $s, d = $d, fs = $fs")
           fs = fs.updated(s, Tombstone(d))
-          //rintln(s"removed: s = $s, d = $d, fs = $fs")
           if (s > 0) {
             // Adjust distance to next of kin for all preceding tombstones
             var t = s - 1
@@ -143,7 +147,6 @@ final class VectorMapX[K, +V] private (
                 case Tombstone.NextOfKin(d) => fs.updated(t, Tombstone(d + 1))
                 case _ => fs
               }
-              //rintln(s"adjusted: t = $t, prev = $prev, fs = $fs")
               t -= 1
               if (t >= 0) prev = fs(t)
             }
@@ -182,13 +185,13 @@ final class VectorMapX[K, +V] private (
 
   override def tail: VectorMapX[K, V] = {
     val (slot, key) = field(0)
-    //rintln(s"tail: slot = $slot, key = $key, fields = $fields, underlying = $underlying")
     new VectorMapX(fields.drop(slot + 1), underlying - key, false)
   }
 
   override def init: VectorMapX[K, V] = {
-    val (slot, key) = field(size - 1)
-    new VectorMapX(fields.dropRight(size - 1 - slot + 1), underlying - key, false)
+    val lastSlot = size - 1
+    val (slot, key) = field(lastSlot)
+    new VectorMapX(fields.dropRight(slot - lastSlot + 1), underlying - key, false)
   }
 
   def keyIterator: Iterator[K] = iterator.map(_._1)
@@ -214,12 +217,9 @@ object VectorMapX extends MapFactory[VectorMapX] {
   }
 
   def empty[K, V]: VectorMapX[K, V] =
-    new VectorMapX[K, V](Vector.empty[K],
-      if (VectorMapX.useBaseline)
-        OldHashMap.empty[K, (Int, V)]
-      else
-        HashMap.empty[K, (Int, V)]
-    )
+    new VectorMapX[K, V](
+      Vector.empty[K],
+      HashMap.empty[K, (Int, V)])
 
   def from[K, V](it: collection.IterableOnce[(K, V)]): VectorMapX[K, V] =
     it match {
@@ -232,8 +232,4 @@ object VectorMapX extends MapFactory[VectorMapX] {
       def addOne(elem: (K, V)): this.type = { elems = elems + elem; this }
     }
 
-  // getenv not getProperty for Scala.js friendliness.
-  // TODO remove before 2.13.0-RC1? see scala/collection-strawman#572
-  private final val useBaseline: Boolean =
-    System.getenv("SCALA_COLLECTION_IMMUTABLE_USE_BASELINE") == "true"
 }
