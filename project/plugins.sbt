@@ -4,7 +4,7 @@ addSbtPlugin("com.jsuereth" % "sbt-pgp" % "1.1.0")
 
 addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.3.4")
 
-addSbtPlugin("ch.epfl.lamp" % "sbt-dotty" % "0.2.2")
+addSbtPlugin("ch.epfl.lamp" % "sbt-dotty" % "0.2.4")
 
 libraryDependencies ++= Seq(
   "org.jfree" % "jfreechart" % "1.0.14",

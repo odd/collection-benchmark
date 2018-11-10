@@ -136,6 +136,31 @@ final class OrderedMapX[K, +V] private (
     new OrderedMapX(init, mapping.remove(last), ordinal, orderedBy)
   }
 
+  override def slice(from: Int, until: Int): OrderedMapX[K, V] = {
+    val sz = size
+    if (sz == 0 || from >= until) empty
+    else {
+      val sz = size
+      val f = if (from >= 0) from else 0
+      val u = if (until <= sz) until else sz
+      if (f >= u) empty
+      else {
+        val (front, rest) = this.ordering.splitAt(f)
+        val (ordering, rear) = rest.splitAt(u - f)
+        var mapping = this.mapping
+        val frontIter = front.iterator
+        while (frontIter.hasNext) {
+          mapping = mapping - frontIter.next()
+        }
+        val rearIter = rear.iterator
+        while (rearIter.hasNext) {
+          mapping = mapping - rearIter.next()
+        }
+        new OrderedMapX(ordering, mapping, ordinal, orderedBy)
+      }
+    }
+  }
+
   def get(key: K): Option[V] = mapping.get(key).map(value)
 
   def iterator: Iterator[(K, V)] = new AbstractIterator[(K, V)] {
@@ -302,12 +327,14 @@ object OrderedMapX extends MapFactory[OrderedMapX] {
         case _: Ordering[_] => false // The only empty Orderings are eq Nil
         case _ => super.equals(that)
       }
+      override def toString = "Ø"
     }
 
     private final case class Tip[+T](ord: Int, value: T) extends Ordering[T] {
       def withValue[S](s: S) =
         if (s.asInstanceOf[AnyRef] eq value.asInstanceOf[AnyRef]) this.asInstanceOf[Tip[S]]
         else Tip(ord, s)
+      override def toString = s"($ord -> $value)"
     }
 
     private final case class Bin[+T](prefix: Int, mask: Int, left: Ordering[T], right: Ordering[T]) extends Ordering[T] {
@@ -315,6 +342,7 @@ object OrderedMapX extends MapFactory[OrderedMapX] {
         if ((this.left eq left) && (this.right eq right)) this.asInstanceOf[Bin[S]]
         else Bin[S](prefix, mask, left, right)
       }
+      override def toString = s"($left :: $prefix | $mask :: $right)"
     }
 
     private def branchMask(i: Int, j: Int) = highestOneBit(i ^ j)
@@ -393,6 +421,45 @@ object OrderedMapX extends MapFactory[OrderedMapX] {
         (bin(p, m, l, init), last)
       case Tip(_, v) => (Zero, v)
       case Zero => throw new NoSuchElementException("init of empty map")
+    }
+
+    final def splitAt(n: Int): (Ordering[T], Ordering[T]) = {
+      var rear = Ordering.empty[T]
+      var i = n
+      (modifyOrRemove { (o, v) =>
+        i -= 1
+        if (i >= 0) Some(v)
+        else {
+          rear = rear.incl(o, v)
+          None
+        }
+      }, rear)
+    }
+
+    /**
+      * A combined transform and filter function. Returns an `Ordering` such that
+      * for each `(key, value)` mapping in this map, if `f(key, value) == None`
+      * the map contains no mapping for key, and if `f(key, value) == Some(x)` the
+      * map contains `(key, x)`.
+      *
+      * @tparam S  The type of the values in the resulting `LongMap`.
+      * @param f   The transforming function.
+      * @return    The modified map.
+      */
+    final def modifyOrRemove[S](f: (Int, T) => Option[S]): Ordering[S] = this match {
+      case Bin(prefix, mask, left, right) =>
+        val newleft = left.modifyOrRemove(f)
+        val newright = right.modifyOrRemove(f)
+        if ((left eq newleft) && (right eq newright)) this.asInstanceOf[Ordering[S]]
+        else bin(prefix, mask, newleft, newright)
+      case Tip(key, value) => f(key, value) match {
+        case None => Zero
+        case Some(value2) =>
+          //hack to preserve sharing
+          if (value.asInstanceOf[AnyRef] eq value2.asInstanceOf[AnyRef]) this.asInstanceOf[Ordering[S]]
+          else Tip(key, value2)
+      }
+      case Zero => Zero
     }
 
     final def iterator: Iterator[T] = this match {

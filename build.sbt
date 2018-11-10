@@ -2,11 +2,12 @@ import com.typesafe.sbt.pgp.PgpKeys.publishSigned
 
 // Convenient setting that allows writing `set scalaVersion := dotty.value` in sbt shell to switch from Scala to Dotty
 val dotty = settingKey[String]("dotty version")
-dotty in ThisBuild := "0.10.0-RC1"
+dotty in ThisBuild := "0.10.0-RC1" //"0.9.0-RC1"
+
 resolvers in ThisBuild += "scala-integration" at "https://scala-ci.typesafe.com/artifactory/scala-integration/"
 
 val collectionsScalaVersionSettings = Seq(
-  scalaVersion := "2.13.0-M5", //"2.13.0-M4", //"2.13.0-pre-94ff57e",
+  scalaVersion := "2.13.0-M5", //"2.13.0-M4",
   crossScalaVersions := scalaVersion.value :: dotty.value :: Nil
 )
 
@@ -84,7 +85,7 @@ val memory = project.in(file("memory"))
   .enablePlugins(JmhPlugin)
   .settings(commonSettings)
   .settings(
-      libraryDependencies += "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-macros" % "0.29.17-SNAPSHOT", //"0.27.1",
+      libraryDependencies += "com.github.plokhotnyuk.jsoniter-scala" %% "macros" % "0.27.1",
       charts := Def.inputTaskDyn {
       val targetDir = crossTarget.value
       val report = targetDir / "report.json"
@@ -95,6 +96,5 @@ val memory = project.in(file("memory"))
         targetDir
       }.toTask(s" ${report.absolutePath}")
   }.evaluated)
-  */
-
+*/
 lazy val charts = inputKey[File]("Runs the benchmarks and produce charts")

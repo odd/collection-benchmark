@@ -13,7 +13,7 @@ import org.openjdk.jmh.infra.Blackhole
 @State(Scope.Benchmark)
 class VectorMapXBenchmark {
   //@Param(scala.Array("0", "1", "2", "3", "4", "7", "8", "15", "16", "17", "39", "282", "4096", "131070", "7312102"))
-  @Param(scala.Array("1", "7", "4096"/*, "128000"*/))
+  @Param(scala.Array("1", "7", "4096", "128000"))
   var size: Int = _
 
   val random = new scala.util.Random(19740115L)
