@@ -1,0 +1,5 @@
+https://regex101.com/r/WHgw0B/1
+
+(?s)"benchmark" : "(?:[^"]+)(\..+?)",(.+?)"impl" : "(ListMap|OrderedMap|VectorMap)",
+
+"benchmark" : "$3$1",$2

@@ -1,13 +1,12 @@
-import com.typesafe.sbt.pgp.PgpKeys.publishSigned
-
 // Convenient setting that allows writing `set scalaVersion := dotty.value` in sbt shell to switch from Scala to Dotty
 val dotty = settingKey[String]("dotty version")
-dotty in ThisBuild := "0.10.0-RC1" //"0.9.0-RC1"
+dotty in ThisBuild := "0.11.0-RC1"
 
-resolvers in ThisBuild += "scala-integration" at "https://scala-ci.typesafe.com/artifactory/scala-integration/"
+resolvers in ThisBuild ++= Seq(
+  "scala-pr-validation-snapshots" at "https://scala-ci.typesafe.com/artifactory/scala-pr-validation-snapshots/",
+  "scala-integration" at "https://scala-ci.typesafe.com/artifactory/scala-integration/")
 
 val collectionsScalaVersionSettings = Seq(
-  scalaVersion := "2.13.0-M5", //"2.13.0-M4",
   crossScalaVersions := scalaVersion.value :: dotty.value :: Nil
 )
 
@@ -15,7 +14,7 @@ val commonSettings = Seq(
   organization := "org.scala-lang",
   name := "collection-benchmark",
   version := "0.1.0-SNAPSHOT",
-  scalaVersion := "2.13.0-M5", //"2.13.0-M4",
+  scalaVersion := "2.13.0-pre-4b829ce-SNAPSHOT", //"2.13.0-pre-83212f2-SNAPSHOT", //"2.13.0-M5", //"2.13.0-M4",
   scalacOptions ++= Seq("-deprecation", "-feature", "-unchecked", "-language:higherKinds"/*, "-opt:l:classpath"*/),
   scalacOptions ++= {
     if (!isDotty.value)
@@ -39,12 +38,6 @@ val commonSettings = Seq(
   publishLocal := ((): Unit),
   pomExtra :=
     <developers>
-      <developer><id>ichoran</id><name>Rex Kerr</name></developer>
-      <developer><id>odersky</id><name>Martin Odersky</name></developer>
-      <developer><id>pathikrit</id><name>Pathikrit Bhowmick</name></developer>
-      <developer><id>julienrf</id><name>Julien Richard-Foy</name></developer>
-      <developer><id>szeiger</id><name>Stefan Zeiger</name></developer>
-      <developer><id>msteindorfer</id><name>Michael J. Steindorfer</name></developer>
       <developer><id>odd</id><name>Odd Möller</name></developer>
     </developers>
 )
@@ -62,39 +55,10 @@ val collections = project.in(file("collections"))
 val time = project.in(file("time"))
   .dependsOn(collections)
   .enablePlugins(JmhPlugin)
+  .settings(mainClass in (Jmh, run) := Some("collection.benchmark.JmhRunner"))
   .settings(commonSettings)
-     // Dotty 0.3.0-RC1 crashes when trying to compile this project
-    //.settings(disableDotty)
-    .settings(
-      charts := Def.inputTaskDyn {
-        val benchmarks = Def.spaceDelimited().parsed
-        val targetDir = crossTarget.value
-        val jmhReport = targetDir / "jmh-result.json"
-        val runTask = run in Jmh
-        Def.inputTask {
-          val _ = runTask.evaluated
-          scala.collection.benchmark.Bencharts(jmhReport, "Execution time (lower is better)", targetDir)
-          targetDir
-        }.toTask(s" -rf json -rff ${jmhReport.absolutePath} ${benchmarks.mkString(" ")}")
-      }.evaluated
-    )
 
-/*
 val memory = project.in(file("memory"))
   .dependsOn(collections)
   .enablePlugins(JmhPlugin)
   .settings(commonSettings)
-  .settings(
-      libraryDependencies += "com.github.plokhotnyuk.jsoniter-scala" %% "macros" % "0.27.1",
-      charts := Def.inputTaskDyn {
-      val targetDir = crossTarget.value
-      val report = targetDir / "report.json"
-      val runTask = run in Compile
-      Def.inputTask {
-        val _ = runTask.evaluated
-        scala.collection.benchmark.Bencharts(report, "Memory footprint (lower is better)", targetDir)
-        targetDir
-      }.toTask(s" ${report.absolutePath}")
-  }.evaluated)
-*/
-lazy val charts = inputKey[File]("Runs the benchmarks and produce charts")

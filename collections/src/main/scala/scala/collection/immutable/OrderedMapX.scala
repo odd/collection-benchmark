@@ -89,12 +89,12 @@ final class OrderedMapX[K, +V] private (
     }
   }
 
-  def remove(key: K): OrderedMapX[K, V] = {
+  def removed(key: K): OrderedMapX[K, V] = {
     mapping.get(key) match {
       case Some((o, _)) ⇒
         new OrderedMapX(
           ordering.excl(o),
-          mapping.remove(key),
+          mapping.removed(key),
           ordinal,
           orderedBy)
       case None ⇒
@@ -128,12 +128,12 @@ final class OrderedMapX[K, +V] private (
 
   override def tail: OrderedMapX[K, V] = {
     val (head, tail) = ordering.headTail
-    new OrderedMapX(tail, mapping.remove(head), ordinal, orderedBy)
+    new OrderedMapX(tail, mapping.removed(head), ordinal, orderedBy)
   }
 
   override def init: OrderedMapX[K, V] = {
     val (init, last) = ordering.initLast
-    new OrderedMapX(init, mapping.remove(last), ordinal, orderedBy)
+    new OrderedMapX(init, mapping.removed(last), ordinal, orderedBy)
   }
 
   override def slice(from: Int, until: Int): OrderedMapX[K, V] = {
@@ -208,6 +208,7 @@ final class OrderedMapX[K, +V] private (
     new OrderedMapX[K2, V2](ong, mng, ordinal, orderedBy)
   }
 
+  /*
   override def flatMap[K2, V2](f: ((K, V)) => IterableOnce[(K2, V2)]): OrderedMapX[K2, V2] = {
     var ong: Ordering[K2] = Ordering.empty
     val mng: Mapping[K2, V2] = mapping.flatMap {
@@ -219,6 +220,28 @@ final class OrderedMapX[K, +V] private (
         }
     }
     new OrderedMapX[K2, V2](ong, mng, ordinal, orderedBy)
+  }*/
+
+  override def flatMap[K2, V2](f: ((K, V)) => IterableOnce[(K2, V2)]): OrderedMapX[K2, V2] = {
+    var ong: Ordering[K2] = Ordering.empty
+    var mng: Mapping[K2, V2] = Mapping.empty
+    var ord = 0
+    val i = ordering.iterator
+    while (i.hasNext) {
+      val k = i.next()
+      val (o, v) = mapping(k)
+      val j = f((k, v)).iterator
+      while (j.hasNext) {
+        val (k2, v2) = j.next()
+        //if ((orderedBy == OrderBy.Modification && k != k2 && v != v2) || !mng.contains(k2)) {
+        if ((orderedBy == OrderBy.Modification && k != k2 && v != v2) || !mng.contains(k2)) {
+          mng += k2 -> (ord, v2)
+          ong = ong.incl(ord, k2)
+        }
+        ord += 1
+      }
+    }
+    new OrderedMapX[K2, V2](ong, mng, ord, orderedBy)
   }
 
   override def collect[K2, V2](pf: PartialFunction[(K, V), (K2, V2)]): OrderedMapX[K2, V2] = {
@@ -459,6 +482,12 @@ object OrderedMapX extends MapFactory[OrderedMapX] {
           if (value.asInstanceOf[AnyRef] eq value2.asInstanceOf[AnyRef]) this.asInstanceOf[Ordering[S]]
           else Tip(key, value2)
       }
+      case Zero => Zero
+    }
+
+    final def transform[S](f: (Int, T) => S): Ordering[S] = this match {
+      case b @ Bin(prefix, mask, left, right) => b.bin(left.transform(f), right.transform(f))
+      case t @ Tip(key, value) => t.withValue(f(key, value))
       case Zero => Zero
     }
 
