@@ -1,6 +1,6 @@
 // Convenient setting that allows writing `set scalaVersion := dotty.value` in sbt shell to switch from Scala to Dotty
 val dotty = settingKey[String]("dotty version")
-dotty in ThisBuild := "0.11.0-RC1"
+dotty in ThisBuild := "0.19.0-RC1"
 
 resolvers in ThisBuild ++= Seq(
   "scala-pr-validation-snapshots" at "https://scala-ci.typesafe.com/artifactory/scala-pr-validation-snapshots/",
@@ -14,7 +14,7 @@ val commonSettings = Seq(
   organization := "org.scala-lang",
   name := "collection-benchmark",
   version := "0.1.0-SNAPSHOT",
-  scalaVersion := "2.13.0-pre-4b829ce-SNAPSHOT", //"2.13.0-pre-83212f2-SNAPSHOT", //"2.13.0-M5", //"2.13.0-M4",
+  scalaVersion := "2.13.1",
   scalacOptions ++= Seq("-deprecation", "-feature", "-unchecked", "-language:higherKinds"/*, "-opt:l:classpath"*/),
   scalacOptions ++= {
     if (!isDotty.value)

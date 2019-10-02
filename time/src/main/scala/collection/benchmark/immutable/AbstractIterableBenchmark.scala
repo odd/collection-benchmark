@@ -2,12 +2,13 @@ package collection.benchmark
 package immutable
 
 import scala.collection.immutable._
+import scala.collection.mutable
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
 abstract class AbstractIterableBenchmark extends AbstractBenchmark {
   //@Param(scala.Array("0", "1", "2", "3", "4", "7", "8", "15", "16", "17", "39", "282", "4096", "131070", "7312102"))
-  @Param(scala.Array("7")) //, "65", "4096"/*, "128000"*/))
+  @Param(scala.Array("7", "65", "1024")) //7", "65", "4096", "128000"))
   var size: Int = _
   def xs: Iterable[Long]
   def ys: Iterable[Long]
@@ -23,21 +24,6 @@ abstract class AbstractIterableBenchmark extends AbstractBenchmark {
   def combiner: (Long, Long) => Long
   def finder: Long => Boolean
   def spanner: Long => Boolean
-
-  @Benchmark
-  def create_build(bh: Blackhole): Unit = {
-    except("create_build")
-    var t = zero
-    val b = xs.iterableFactory.newBuilder[Long]
-    b.sizeHint(size)
-    var i = 0
-    while (i < size) {
-      b += t
-      t = successor(t)
-      i += 1
-    }
-    bh.consume(b.result())
-  }
 
   @Benchmark
   def expand_concat(bh: Blackhole): Unit = {
@@ -154,6 +140,24 @@ abstract class AbstractIterableBenchmark extends AbstractBenchmark {
   }
 
   @Benchmark
+  def transform_map2(bh: Blackhole): Unit = {
+    except("transform_map2")
+    xs match {
+      case as: ArraySeq.ofLong => bh.consume(as.map(mapper))
+      case _ => bh.consume(xs.map(mapper))
+    }
+  }
+
+  @Benchmark
+  def transform_map3(bh: Blackhole): Unit = {
+    except("transform_map3")
+    xs match {
+      case xs: ArraySeq[Long] => bh.consume(xs.map(mapper))
+      case _ => bh.consume(xs.map(mapper))
+    }
+  }
+
+  @Benchmark
   def transform_collect(bh: Blackhole): Unit = {
     except("transform_collect")
     bh.consume(xs.collect {
@@ -173,13 +177,87 @@ abstract class AbstractIterableBenchmark extends AbstractBenchmark {
   }
 
   @Benchmark
+  def transform_collect2(bh: Blackhole): Unit = {
+    except("transform_collect2")
+    xs match {
+      case xs: ArraySeq[Long] =>
+        bh.consume(xs.collect {
+          case t if t % 5L == 0L =>
+            val t2 = mapper(t)
+            bh.consume(t2)
+            t2
+          case t if t % 3L == 0L =>
+            val t2 = mapper(t)
+            bh.consume(t2)
+            t2
+          case t if t == size - 1 =>
+            val t2 = mapper(t)
+            bh.consume(t2)
+            t2
+        })
+      case _ =>
+        bh.consume(xs.collect {
+          case t if t % 5L == 0L =>
+            val t2 = mapper(t)
+            bh.consume(t2)
+            t2
+          case t if t % 3L == 0L =>
+            val t2 = mapper(t)
+            bh.consume(t2)
+            t2
+          case t if t == size - 1 =>
+            val t2 = mapper(t)
+            bh.consume(t2)
+            t2
+        })
+    }
+  }
+
+  @Benchmark
+  def transform_collect3(bh: Blackhole): Unit = {
+    except("transform_collect3")
+    xs match {
+      case xs: ArraySeq.ofLong =>
+        bh.consume(xs.collect {
+          case t if t % 5L == 0L =>
+            val t2 = mapper(t)
+            bh.consume(t2)
+            t2
+          case t if t % 3L == 0L =>
+            val t2 = mapper(t)
+            bh.consume(t2)
+            t2
+          case t if t == size - 1 =>
+            val t2 = mapper(t)
+            bh.consume(t2)
+            t2
+        })
+      case _ =>
+        bh.consume(xs.collect {
+          case t if t % 5L == 0L =>
+            val t2 = mapper(t)
+            bh.consume(t2)
+            t2
+          case t if t % 3L == 0L =>
+            val t2 = mapper(t)
+            bh.consume(t2)
+            t2
+          case t if t == size - 1 =>
+            val t2 = mapper(t)
+            bh.consume(t2)
+            t2
+        })
+    }
+  }
+
+  @Benchmark
   def transform_flatMap(bh: Blackhole): Unit = {
     except("transform_flatMap")
     bh.consume(xs.flatMap {
-      case t: Long if t % 5L == 0L =>
+      case t if t % 5L == 0L =>
         bh.consume(t)
         LazyList.range(1L, t / 5, 5)
-      case t: Long if t % 3L == 0L =>
+      case t if t % 3L == 0L =>
         bh.consume(t)
         LazyList(t, -t)
       case t if t == size - 1 =>
@@ -188,6 +266,76 @@ abstract class AbstractIterableBenchmark extends AbstractBenchmark {
       case _ =>
         LazyList()
     })
+  }
+
+  @Benchmark
+  def transform_flatMap2(bh: Blackhole): Unit = {
+    except("transform_flatMap2")
+    xs match {
+      case xs: ArraySeq[Long] =>
+        bh.consume(xs.flatMap {
+          case t if t % 5L == 0L =>
+            bh.consume(t)
+            LazyList.range(1L, t / 5, 5)
+          case t if t % 3L == 0L =>
+            bh.consume(t)
+            LazyList(t, -t)
+          case t if t == size - 1 =>
+            bh.consume(t)
+            LazyList.range(1L, t)
+          case _ =>
+            LazyList()
+        })
+      case _ =>
+        bh.consume(xs.flatMap {
+          case t if t % 5L == 0L =>
+            bh.consume(t)
+            LazyList.range(1L, t / 5, 5)
+          case t if t % 3L == 0L =>
+            bh.consume(t)
+            LazyList(t, -t)
+          case t if t == size - 1 =>
+            bh.consume(t)
+            LazyList.range(1L, t)
+          case _ =>
+            LazyList()
+        })
+    }
+  }
+
+  @Benchmark
+  def transform_flatMap3(bh: Blackhole): Unit = {
+    except("transform_flatMap3")
+    xs match {
+      case xs: ArraySeq.ofLong =>
+        bh.consume(xs.flatMap {
+          case t if t % 5L == 0L =>
+            bh.consume(t)
+            LazyList.range(1L, t / 5, 5)
+          case t if t % 3L == 0L =>
+            bh.consume(t)
+            LazyList(t, -t)
+          case t if t == size - 1 =>
+            bh.consume(t)
+            LazyList.range(1L, t)
+          case _ =>
+            LazyList()
+        })
+      case _ =>
+        bh.consume(xs.flatMap {
+          case t if t % 5L == 0L =>
+            bh.consume(t)
+            LazyList.range(1L, t / 5, 5)
+          case t if t % 3L == 0L =>
+            bh.consume(t)
+            LazyList(t, -t)
+          case t if t == size - 1 =>
+            bh.consume(t)
+            LazyList.range(1L, t)
+          case _ =>
+            LazyList()
+        })
+    }
   }
 
   @Benchmark
@@ -236,7 +384,7 @@ abstract class AbstractIterableBenchmark extends AbstractBenchmark {
 
   @Benchmark
   def traverse_equals(bh: Blackhole): Unit = {
-    except("transform_equals")
+    except("traverse_equals")
     bh.consume(xs == ys)
   }
 

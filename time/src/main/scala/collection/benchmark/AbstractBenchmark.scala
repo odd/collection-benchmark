@@ -10,7 +10,7 @@ import org.openjdk.jmh.annotations._
 @BenchmarkMode(scala.Array(Mode.AverageTime))
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 @State(Scope.Benchmark)
-@Warmup(iterations = 5, time = 200, timeUnit = TimeUnit.MILLISECONDS)
+@Warmup(iterations = 9, time = 700, timeUnit = TimeUnit.MILLISECONDS)
 @Measurement(iterations = 7, time = 500, timeUnit = TimeUnit.MILLISECONDS)
 @Fork(value = 1, jvmArgs = Array(
   "-server",
@@ -20,10 +20,16 @@ import org.openjdk.jmh.annotations._
   "-XX:MaxNewSize=1g",
   "-XX:InitialCodeCacheSize=512m",
   "-XX:ReservedCodeCacheSize=512m",
+  "-XX:+AlwaysPreTouch",
+  /*
+  "-XX:+UnlockExperimentalVMOptions",
+  "-XX:+UseJVMCICompiler",
+  "-XX:+EnableJVMCI",
+  "-XX:+EagerJVMCI",
+  "-Dgraal.ShowConfiguration=info",
   "-XX:+UseParallelGC",
   "-XX:-UseBiasedLocking",
-  "-XX:+AlwaysPreTouch",
-  "-XX:-TieredCompilation"
+  "-XX:-TieredCompilation",*/
 ))
 abstract class AbstractBenchmark {
   def exceptions: PartialFunction[String, Boolean] = PartialFunction.empty
