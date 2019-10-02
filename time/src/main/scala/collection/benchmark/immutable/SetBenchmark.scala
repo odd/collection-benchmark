@@ -19,6 +19,13 @@ class SetBenchmark extends AbstractIterableBenchmark {
       case "TreeSet" => TreeSet(1L until n: _*)
     }
   }
+  def createBuilder: mutable.Builder[Long, Set[Long]] = {
+    impl match {
+      case "HashSet" => HashSet.newBuilder[Long]
+      case "ListSet" => ListSet.newBuilder[Long]
+      case "TreeSet" => TreeSet.newBuilder[Long]
+    }
+  }
   override def zero = 0L
   override def successor = _ + 1L
   override def mapper = -_
@@ -30,11 +37,26 @@ class SetBenchmark extends AbstractIterableBenchmark {
   @Setup(Level.Trial)
   def initTrial(): Unit = {
     xs = create(size)
-    ys = create(size / 2) ++ create(size / 2).map(mapper)
+    ys = xs.init.incl(0L)
     zs = create((size / 1000).max(2))
     if (size > 0) {
       randomIndices = scala.Array.fill(1000)(random.nextInt(size))
     }
+  }
+
+  @Benchmark
+  def create_build(bh: Blackhole): Unit = {
+    except("create_build")
+    var t = zero
+    val b = createBuilder
+    b.sizeHint(size)
+    var i = 0
+    while (i < size) {
+      b.addOne(t)
+      t = successor(t)
+      i += 1
+    }
+    bh.consume(b.result())
   }
 
   @Benchmark

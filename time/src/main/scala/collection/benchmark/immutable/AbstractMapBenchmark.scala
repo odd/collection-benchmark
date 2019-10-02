@@ -7,7 +7,7 @@ import org.openjdk.jmh.infra.Blackhole
 
 abstract class AbstractMapBenchmark extends AbstractBenchmark {
   //@Param(scala.Array("0", "1", "2", "3", "4", "7", "8", "15", "16", "17", "39", "282", "4096", "131070", "7312102"))
-  @Param(scala.Array("7", "65", "1024"/*, "4096"*//*, "128000"*/))
+  @Param(scala.Array("63", "4096", "128000")) /*/*"7", "65", "1024", "4096"*//*, "128000"*/))*/
   var size: Int = _
 
   var xs: Map[Long, Long] = _
@@ -188,15 +188,15 @@ abstract class AbstractMapBenchmark extends AbstractBenchmark {
   def transform_flatMap(bh: Blackhole): Unit = {
     except("transform_flatMap")
     bh.consume(xs.flatMap {
-      case (k: Long, v: Long) if k % 5L == 0L =>
+      case (k: Long, v: Long) if k % 50L == 0L =>
         bh.consume(k)
         LazyList.range(1L, k / 5, 5).map(n => (-n, v))
       case (k: Long, v: Long) if k % 3L == 0L =>
         bh.consume(k)
-        LazyList((k, v), (-k, -v))
+        LazyList((k, -v), (-k, -v))
       case (k: Long, v: Long) if k == size - 1 =>
         bh.consume(k)
-        LazyList.range(1L, k).map(n => (-n, v))
+        LazyList.range(1L, k / 10).map(n => (-n, -v))
       case _ =>
         LazyList()
     })
@@ -227,12 +227,14 @@ abstract class AbstractMapBenchmark extends AbstractBenchmark {
     bh.consume(xs.zip(xs))
   }
 
+  /*
   @Benchmark
   def transform_zipMapTupled(bh: Blackhole): Unit = {
     except("transform_zipMapTupled")
     val f: ((Long, Long), (Long, Long)) => (Long, Long) = { case ((a1: Long, b1: Long), (a2: Long, b2: Long)) => (a1 + a2, b1 - b2) }
     bh.consume(xs.zip(xs).map(f.tupled))
   }
+  */
 
   @Benchmark
   def transform_zipWithIndex(bh: Blackhole): Unit = {
@@ -246,11 +248,13 @@ abstract class AbstractMapBenchmark extends AbstractBenchmark {
     bh.consume(xs.groupBy(grouper))
   }
 
+  /*
   @Benchmark
   def traverse_equals(bh: Blackhole): Unit = {
-    except("transform_equals")
+    except("traverse_equals")
     bh.consume(xs == ys)
   }
+ */
 
   @Benchmark
   def access_find(bh: Blackhole): Unit = {
@@ -299,11 +303,13 @@ abstract class AbstractMapBenchmark extends AbstractBenchmark {
     bh.consume(xs.lazyZip(xs).map((_, _)))
   }
 
+  /*
   @Benchmark
   def transform_removeAll(bh: Blackhole): Unit = {
     except("transform_removeAll")
     bh.consume(xs.removedAll(randomIndices.map(_.toLong)))
   }
+  */
 
   @Benchmark
   def transform_removeAllIterator(bh: Blackhole): Unit = {

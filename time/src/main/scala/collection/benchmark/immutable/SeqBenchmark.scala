@@ -3,11 +3,12 @@ package immutable
 
 import scala.annotation.tailrec
 import scala.collection.immutable._
+import scala.collection.mutable
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
 class SeqBenchmark extends AbstractIterableBenchmark {
-  @Param(scala.Array("ArraySeq", "LazyList", "List", "NumericRange", "Vector"))
+  @Param(scala.Array("ArraySeq", "Vector")) //LazyList", "List", "NumericRange", "Vector"))
   var impl: String = _
   var zipped: Seq[(Long, Long)] = _
   var xs: Seq[Long] = _
@@ -22,6 +23,15 @@ class SeqBenchmark extends AbstractIterableBenchmark {
       case "Vector" => Vector(0L until size: _*)
     }
   }
+  def createBuilder: mutable.Builder[Long, Seq[Long]] = {
+    impl match {
+      case "ArraySeq" => ArraySeq.newBuilder[Long]
+      case "LazyList" => LazyList.newBuilder[Long]
+      case "List" => List.newBuilder[Long]
+      case "NumericRange" => ???
+      case "Vector" => Vector.newBuilder[Long]
+    }
+  }
   override def zero: Long = 0L
   override def successor = _ + 1L
   override def mapper = -_
@@ -33,12 +43,27 @@ class SeqBenchmark extends AbstractIterableBenchmark {
   @Setup(Level.Trial)
   def initTrial(): Unit = {
     xs = create(size)
-    ys = create(size / 2) ++ create(size / 2).map(mapper)
-    zs = create((size / 1000).max(2))
+    ys = xs.updated(xs.size - 1 , 0L)
+    zs = create((size / 1000).min(2))
     zipped = xs.map(n => (n, -n))
     if (size > 0) {
       randomIndices = scala.Array.fill(1000)(random.nextInt(size))
     }
+  }
+
+  @Benchmark
+  def create_build(bh: Blackhole): Unit = {
+    except("create_build")
+    var t = zero
+    val b = createBuilder
+    b.sizeHint(size)
+    var i = 0
+    while (i < size) {
+      b.addOne(t)
+      t = successor(t)
+      i += 1
+    }
+    bh.consume(b.result())
   }
 
   @Benchmark
@@ -82,7 +107,7 @@ class SeqBenchmark extends AbstractIterableBenchmark {
         case _ => true
       }
     }
-    bh.consume(isPalindrome(ys))
+    bh.consume(isPalindrome(xs ++ xs.reverse))
   }
 
   @Benchmark

@@ -3,29 +3,46 @@ package collection.benchmark
 import java.io.File
 import java.nio.file.{Files, Paths}
 import java.time.Instant
-import scala.collection.immutable.{ArraySeq, HashSet, ListMap, NumericRange, OrderedMapX, TreeSet, VectorMap}
+import scala.collection.immutable.{ArraySeq, HashSet, ListMap, NumericRange, TreeSeqMap, TreeSet, VectorMap}
 import scala.collection.mutable
-import scala.compat.Platform
+import java.lang.management.GarbageCollectorMXBean
+import java.lang.management.ManagementFactory
 
 object MemoryFootprint extends App {
   val resultsDir = new File("memory/results")
   resultsDir.mkdirs()
   val reportPath = Paths.get("memory/results/memory-footprint-" + Instant.now().toString.replace(':', '-') + ".json")
-  val sizes = scala.List(8, 64, 512, 4096, 32768) //, 262144) //, 2097152)
+  val sizes = scala.List(8, 64, 512, 4096, 32768, 262144) //, 2097152)
   val runtime = Runtime.getRuntime
-  val obj: AnyRef = null
   var placeholder: Any = _
 
-  def benchmark[A](gen: Int => A): scala.List[(Int, Long)] = (
+  def getCurrentlyUsedMemory = ManagementFactory.getMemoryMXBean.getHeapMemoryUsage.getUsed + ManagementFactory.getMemoryMXBean.getNonHeapMemoryUsage.getUsed
+  def getGcCount = {
+    import scala.jdk.CollectionConverters._
+    var sum = 0L
+    for (b <- ManagementFactory.getGarbageCollectorMXBeans.asScala) {
+      val count = b.getCollectionCount
+      if (count != -1) sum += count
+    }
+    sum
+  }
+  def getReallyUsedMemory = {
+    val before = getGcCount
+    System.gc()
+    while ( {
+      getGcCount == before
+    }) {}
+    getCurrentlyUsedMemory
+  }
+
+  def benchmark[A](gen: Int => A) = (
     // We run 5 iterations and pick the last result only
     for (_ <- scala.Range(0, 5)) yield {
       for (size <- sizes) yield {
         placeholder = null
-        Platform.collectGarbage()
-        val memBefore = runtime.totalMemory() - runtime.freeMemory()
+        val memBefore = getReallyUsedMemory
         placeholder = gen(size)
-        Platform.collectGarbage()
-        val memAfter = runtime.totalMemory() - runtime.freeMemory()
+        val memAfter = getReallyUsedMemory
         size -> (memAfter - memBefore)
       }
     }
@@ -33,10 +50,10 @@ object MemoryFootprint extends App {
 
   val memories =
     Map(
-      "ListMap"               -> benchmark(n => ListMap.from((0 until n).map(n => n -> obj))),
-      "OrderedMap"            -> benchmark(n => OrderedMapX.from((0 until n).map(n => n -> obj))),
-      "VectorMap"             -> benchmark(n => VectorMap.from((0 until n).map(n => n -> obj))),
-      "LinkedHashMap"         -> benchmark(n => mutable.LinkedHashMap.from((0 until n).map(n => n -> obj))),
+      //"ListMap"               -> benchmark(n => ListMap.from((0 until n).map(n => n -> -n))),
+      "TreeSeqMap"            -> benchmark(n => TreeSeqMap.from((0 until n).map(n => n -> -n))),
+      "VectorMap"             -> benchmark(n => VectorMap.from((0 until n).map(n => n -> -n))),
+      //"LinkedHashMap"         -> benchmark(n => mutable.LinkedHashMap.from((0 until n).map(n => n -> -n))),
       /*
       "Array"                 -> benchmark(Array.fill(_)(obj)),
       "ArraySeq"              -> benchmark(ArraySeq.fill(_)(obj)),
